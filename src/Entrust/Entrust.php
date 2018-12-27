@@ -38,7 +38,6 @@ class Entrust
      */
     public function hasRole($role, $requireAll = false)
     {
-        dd('test');
         if ($user = $this->user()) {
             return $user->hasRole($role, $requireAll);
         }
