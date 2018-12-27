@@ -8,9 +8,11 @@
  * @package Zizaco\Entrust
  */
 
+use App\Models\Role;
 use Illuminate\Cache\TaggableStore;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Config;
+use Illuminate\Support\Facades\DB;
 use InvalidArgumentException;
 
 trait EntrustUserTrait
@@ -22,14 +24,17 @@ trait EntrustUserTrait
      */
     public function cachedRoles()
     {
-        $userPrimaryKey = $this->primaryKey;
-        $cacheKey = 'entrust_roles_for_user_'.$this->$userPrimaryKey;
-        if(Cache::getStore() instanceof TaggableStore) {
-            return Cache::tags(Config::get('entrust.role_user_table'))->remember($cacheKey, Config::get('cache.ttl'), function () {
-                return $this->roles()->get();
-            });
+
+        $roles = collect();
+        $rolesId = DB::table('role_user')->where('user_id', $this->id)->where('company_id', $this->current_company_id)->get();
+
+        foreach ($rolesId as $r) {
+            $role = Role::findOrFail($r->role_id);
+            $roles->push($role);
         }
-        else return $this->roles()->get();
+
+        return $roles;
+
     }
 
     /**
@@ -247,7 +252,7 @@ trait EntrustUserTrait
      *
      * @param mixed $role
      */
-    public function attachRole($role)
+    public function attachRole($role, $company)
     {
         if(is_object($role)) {
             $role = $role->getKey();
@@ -258,6 +263,7 @@ trait EntrustUserTrait
         }
 
         $this->roles()->attach($role);
+        $this->roles()->attach($role, array('company_id' => $company));
     }
 
     /**
@@ -265,7 +271,7 @@ trait EntrustUserTrait
      *
      * @param mixed $role
      */
-    public function detachRole($role)
+    public function detachRole($role, $company)
     {
         if (is_object($role)) {
             $role = $role->getKey();
@@ -275,7 +281,7 @@ trait EntrustUserTrait
             $role = $role['id'];
         }
 
-        $this->roles()->detach($role);
+        $this->roles()->detach($role, array('company_id' => $company));
     }
 
     /**
@@ -283,10 +289,10 @@ trait EntrustUserTrait
      *
      * @param mixed $roles
      */
-    public function attachRoles($roles)
+    public function attachRoles($roles, $company)
     {
         foreach ($roles as $role) {
-            $this->attachRole($role);
+            $this->attachRole($role, $company);
         }
     }
 
@@ -295,12 +301,12 @@ trait EntrustUserTrait
      *
      * @param mixed $roles
      */
-    public function detachRoles($roles=null)
+    public function detachRoles($roles=null, $company)
     {
         if (!$roles) $roles = $this->roles()->get();
 
         foreach ($roles as $role) {
-            $this->detachRole($role);
+            $this->detachRole($role, $company);
         }
     }
 
