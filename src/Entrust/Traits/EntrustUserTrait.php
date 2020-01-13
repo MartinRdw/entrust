@@ -262,7 +262,6 @@ trait EntrustUserTrait
             $role = $role['id'];
         }
 
-        $this->roles()->attach($role);
         $this->roles()->attach($role, array('company_id' => $company));
     }
 
